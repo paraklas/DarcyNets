@@ -48,26 +48,28 @@ if __name__ == "__main__":
     
     # Dirichlet boundaries
     x_res = 32
-    b0, u0 = X[:x_res,:], u_star[:x_res,:]
-    b1, u1 = X[-x_res:,:], u_star[-x_res:,:]
+    b0, u0 = X[::x_res,:], u_star[::x_res,:]
+    b1, u1 = X[::-x_res,:], u_star[::-x_res,:]    
     X_ubD = np.concatenate([b0, b1], axis = 0)
     Y_ubD = np.concatenate([u0, u1], axis = 0)
     
     # Neumann boundaries
-    b2 = X[::x_res,:]
-    b3 = X[::-x_res,:]
-    n2 = np.tile(np.array([0.0, -1.0]), (b2.shape[0],1))
-    n3 = np.tile(np.array([0.0, 1.0]),  (b3.shape[0],1))
+    b2 = X[:x_res,:]
+    b3 = X[-x_res:,:]
     X_ubN = np.concatenate([b2, b3], axis = 0)
-    Y_ubN = np.zeros((X_ubN.shape[0], 1))
+    Y_ubN = np.zeros((X_ubN.shape[0], 1))   
+    n2 = np.tile(np.array([-1.0, 0.0]), (b2.shape[0],1))
+    n3 = np.tile(np.array([1.0, 0.0]),  (b3.shape[0],1))
     normal_vec = np.concatenate([n2, n3], axis = 0)
-    
+
 #    plt.figure(1)
 #    plt.plot(X[:,0], X[:,1], 'ko')
-#    plt.plot(X_ubD[:,0], X_ubD[:,1], 'ro')
-#    plt.plot(X_ubN[:,0], X_ubN[:,1], 'go')
-#   
+#    plt.plot(b0[:,0], b0[:,1], 'ro')
+#    plt.plot(b1[:,0], b1[:,1], 'go')
+#    plt.plot(b2[:,0], b2[:,1], 'bo')
+#    plt.plot(b3[:,0], b3[:,1], 'mo')
    
+
     # Create model
     layers_u = [2,50,50,50,1]
     layers_k = [2,50,50,50,1]
