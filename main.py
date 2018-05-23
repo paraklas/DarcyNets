@@ -17,10 +17,10 @@ np.random.seed(1234)
 
 if __name__ == "__main__": 
     
-    dataset = np.load('test.npz')
+    dataset = np.load('../test.npz')
     X = dataset['coo']
-    K = dataset['K']
-    U = dataset['h']
+    K = dataset['k']
+    U = dataset['u']
     
     idx = 11
     X_star = X
