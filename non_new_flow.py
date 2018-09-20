@@ -34,11 +34,11 @@ if __name__ == "__main__":
     # Training data
 
     u_idx = np.cast[int](num_obs*lhs(1, N_u)).ravel()
-    X_u = np.cast[np.float64](df[[0]][8:].values[u_idx])
-    Y_u = np.cast[np.float64](df[[1]][8:].values[u_idx])
+    X_u = np.cast[np.float64](df[[2]][8:].values[u_idx])
+    Y_u = np.cast[np.float64](df[[3]][8:].values[u_idx])
     
     f_idx = np.cast[int](num_obs*lhs(1, N_f)).ravel()
-    X_f = np.cast[np.float64](df[[0]][8:].values[f_idx])
+    X_f = np.cast[np.float64](df[[2]][8:].values[f_idx])
     Y_f = -1*np.ones((N_f, 1))
     
     # Dirichlet boundaries   
@@ -50,8 +50,8 @@ if __name__ == "__main__":
     Y_ubN = np.array([[0.0]])
     
     # Test data
-    X_star = np.cast[np.float64](df[[0]][8:].values)
-    u_star = np.cast[np.float64](df[[1]][8:].values)
+    X_star = np.cast[np.float64](df[[2]][8:].values)
+    u_star = np.cast[np.float64](df[[3]][8:].values)
 #    k_star = k(u_star)
     
     # Create model

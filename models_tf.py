@@ -23,6 +23,13 @@ class DarcyNet_toy1D_non_newtonian:
         X_f = (X_f - lb) - 0.5*(ub - lb)
         X_ubD = (X_ubD - lb) - 0.5*(ub - lb)
         X_ubN = (X_ubN - lb) - 0.5*(ub - lb)
+
+        #Center outputs
+        self.Ymin, self.Ymax = Y_u.min(0), Y_u.max(0)
+        Y_u = (Y_u - self.Ymin) - 0.5*(self.Ymax - self.Ymin)
+        Y_ubD = (Y_ubD - self.Ymin) - 0.5*(self.Ymax - self.Ymin)
+        Y_ubN = (Y_ubN - self.Ymin) - 0.5*(self.Ymax - self.Ymin)
+        
         
         self.X_u = X_u
         self.Y_u = Y_u
@@ -212,6 +219,8 @@ class DarcyNet_toy1D_non_newtonian:
         # Predict
         tf_dict = {self.Xu_tf: X_star}    
         u_star = self.sess.run(self.u_pred, tf_dict) 
+        #de-normalize outputs
+        u_star = u_star + 0.5*(self.Ymax - self.Ymin) + self.Ymin
         return u_star
     
     # Evaluates predictions at test points           
