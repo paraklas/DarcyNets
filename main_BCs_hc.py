@@ -26,7 +26,8 @@ np.random.seed(int(sys.argv[-4]))
 
 if __name__ == "__main__": 
 
-    dataset = np.load('../../david_experiment/sdfs/test_sdfs_est_hc_lm.npz')
+#    dataset = np.load('../../david_experiment/sdfs/test_sdfs_est_hc_lm.npz')
+    dataset = np.load('test_sdfs_est_hc_lm.npz')
     X = dataset['centroids'].T
     K = dataset['K']
     U = dataset['u']
@@ -225,6 +226,9 @@ if __name__ == "__main__":
 
         #completely reset tensorflow
         tf.reset_default_graph()
+
+        # debugging
+        # temporary exit here
         sys.exit()
 
     with open("./errors/hc/k_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
