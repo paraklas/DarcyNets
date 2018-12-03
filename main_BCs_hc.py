@@ -227,9 +227,10 @@ if __name__ == "__main__":
         #completely reset tensorflow
         tf.reset_default_graph()
 
-        # debugging
-        # temporary exit here
-        sys.exit()
+
+    # debugging
+    # temporary exit here
+    sys.exit()
 
     with open("./errors/hc/k_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
               "a") as f:
