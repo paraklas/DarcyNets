@@ -5,7 +5,7 @@ Created on Tue Mar 20 21:14:04 2018
 
 @author: Paris
 
-python main_BCs_hc.py runs seed uobs kobs collobs
+python main_BCs_hc.py k_scale_factor runs seed uobs kobs collobs
 """
 import sys
 import csv
@@ -26,15 +26,17 @@ np.random.seed(int(sys.argv[-4]))
 
 if __name__ == "__main__": 
 
-#    dataset = np.load('../../david_experiment/sdfs/test_sdfs_est_hc_lm.npz')
-    dataset = np.load('test_sdfs_est_hc_lm.npz')
-    X = dataset['centroids'].T
-    K = dataset['K']
-    U = dataset['u']
-    
+    dataset = np.load('../../david_experiment/sdfs/test_sdfs_est_hc_lm.npz')
+#    dataset = np.load('test_sdfs_est_hc_lm.npz')
+    Z = dataset['centroids']
+    X = Z[[1,0],:].T
+    Kscale = np.exp(np.float(sys.argv[-6])) / np.max(dataset['K'])
+    K = dataset['K'] * Kscale
+    U = (dataset['u'] - 1.0) / (2.0 - 1.0)
+
     X_star = X
-    k_star = K.T.reshape(-1,1)
-    u_star = U.T.reshape(-1,1)
+    k_star = K.reshape(-1,1)
+    u_star = U.reshape(-1,1)
 
     N_u = int(sys.argv[-3])
     N_k = int(sys.argv[-2])
@@ -111,7 +113,7 @@ if __name__ == "__main__":
 
         # Create model
         layers_u = [2,50,50,50,1]
-        layers_k = [2,50,50,50,1]
+        layers_k = [2,100,100,100,1]
         model = DarcyNet2D_BCs(X_k, Y_k, X_u, Y_u, X_f, Y_f, 
                                X_ubD, Y_ubD, X_ubN, Y_ubN, normal_vec,
                                layers_k, layers_u, lb, ub)
@@ -171,6 +173,7 @@ if __name__ == "__main__":
         fig = plt.figure(1)
         plt.pcolor(XX, YY, K_plot, cmap='viridis')
         plt.plot(X_k[:,0], X_k[:,1], 'ro', markersize = 1)
+        plt.clim(0.0, np.max(k_star))
         plt.colorbar()
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
@@ -226,11 +229,6 @@ if __name__ == "__main__":
 
         #completely reset tensorflow
         tf.reset_default_graph()
-
-
-    # debugging
-    # temporary exit here
-    sys.exit()
 
     with open("./errors/hc/k_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
               "a") as f:

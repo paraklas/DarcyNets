@@ -859,7 +859,12 @@ class DarcyNet2D_BCs:
         X_f = (X_f - lb) - 0.5*(ub - lb)
         X_ubD = (X_ubD - lb) - 0.5*(ub - lb)
         X_ubN = (X_ubN - lb) - 0.5*(ub - lb)
-        
+
+#        Y_k = (Y_k - Y_k.min()) - 0.5*(Y_k.max() - Y_k.min())
+#        Y_u = (Y_u - Y_u.min()) - 0.5*(Y_u.max() - Y_u.min())
+#        Y_ubD = (Y_ubD - Y_ubD.min()) -\
+#            0.5*(Y_ubD.max() - Y_ubD.min())
+
         self.x1_k = X_k[:,0:1]
         self.x2_k = X_k[:,1:2]
         self.Y_k = Y_k

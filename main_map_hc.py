@@ -9,9 +9,11 @@ python main_BCs.py seed uobs kobs collobs
 """
 import sys
 sys.path.append('../../david_experiment/sdfs/')
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
 import csv
 import numpy as np
-import matplotlib.pyplot as plt
 from pyDOE import lhs
 from scipy.interpolate import griddata
 
@@ -27,13 +29,15 @@ np.random.seed(int(sys.argv[-4]))
 if __name__ == "__main__": 
 
     dataset = np.load('../../david_experiment/sdfs/test_sdfs_est_hc_lm.npz')
-    X = dataset['centroids'].T
+    Z = dataset['centroids']
+    X = Z[[1,0],:].T
+#    Kscale = np.exp(1) / np.max(dataset['K'])
     K = dataset['K']
     U = dataset['u']
     
     X_star = X
-    k_star = K.T.reshape(-1,1)
-    u_star = U.T.reshape(-1,1)
+    k_star = K.reshape(-1,1)
+    u_star = U.reshape(-1,1)
 
     N_u = int(sys.argv[-3])
     N_k = int(sys.argv[-2])
@@ -141,12 +145,16 @@ if __name__ == "__main__":
         fig = plt.figure(1)
         plt.pcolor(XX, YY, K_plot, cmap='viridis')
         plt.plot(X_k[:,0], X_k[:,1], 'ro', markersize = 1)
+        plt.clim(0.0, np.max(k_star))
         plt.colorbar()
-        plt.xlabel('$x_1$')
-        plt.ylabel('$x_2$')  
-        plt.title('$k(x_1,x_2)$')
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.xlabel('$x_1$', fontsize=16)
+        plt.ylabel('$x_2$', fontsize=16)
+        plt.title('$k(x_1,x_2)$', fontsize=16)
         fig.tight_layout() 
         fig.savefig('./plots/map_hc/map_sample_'+str(sys.argv[-5])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
+        fig.clf()
 #        plt.subplot(2,2,2)
 #        plt.pcolor(XX, YY, U_plot, cmap='viridis')
 #        plt.plot(X_u[:,0], X_u[:,1], 'ro', markersize = 1)    
@@ -160,9 +168,11 @@ if __name__ == "__main__":
         fig = plt.figure(2)
         plt.pcolor(XX, YY, K_error, cmap='viridis')
         plt.colorbar()
-        plt.xlabel('$x_1$')
-        plt.ylabel('$x_2$')  
-        plt.title('Absolute error')
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.xlabel('$x_1$', fontsize=16)
+        plt.ylabel('$x_2$', fontsize=16)
+        plt.title('Absolute error', fontsize=16)
         
         fig.tight_layout()
 #        plt.subplot(2,2,4)
