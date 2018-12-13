@@ -113,8 +113,8 @@ if __name__ == "__main__":
 
         # Create model
         layers_u = [2,50,50,50,1]
-        layers_k = [2,100,100,100,1]
-        model = DarcyNet2D_BCs(X_k, Y_k, X_u, Y_u, X_f, Y_f, 
+        layers_k = [2,50,50,50,1]
+        model = DarcyNet2D_BCs(X_k, np.log(Y_k), X_u, Y_u, X_f, Y_f, 
                                X_ubD, Y_ubD, X_ubN, Y_ubN, normal_vec,
                                layers_k, layers_u, lb, ub)
         
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         model.train()
         
         # Predict at test points
-        k_pred = model.predict_k(X_star)
+        k_pred = np.exp(model.predict_k(X_star))
         u_pred = model.predict_u(X_star)
         
         # Relative L2 error
@@ -131,6 +131,7 @@ if __name__ == "__main__":
 
         errors_k.append(error_k)
         errors_u.append(error_u)
+        sys.exit(0)
 
        # Plot
         nn = 200
