@@ -5,7 +5,7 @@ Created on Tue Mar 20 21:14:04 2018
 
 @author: Paris
 
-python main_BCs_hc.py k_scale_factor runs seed uobs kobs collobs
+python main_BCs_hc.py runs seed uobs kobs collobs
 """
 import sys
 import csv
@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from pyDOE import lhs
 from scipy.interpolate import griddata
 sys.path.append('')
-from models_tf import DarcyNet2D_BCs
+from models_tf import DarcyNet2D_BCs_Y
 
 import tensorflow as tf
 
@@ -30,16 +30,18 @@ if __name__ == "__main__":
 #    dataset = np.load('test_sdfs_est_hc_lm.npz')
     Z = dataset['centroids']
     X = Z[[1,0],:].T
-    Kscale = np.exp(np.float(sys.argv[-6])) / np.max(dataset['K'])
-    K = dataset['K'] * Kscale
+    Ymax = dataset['Y'].max()
+    Ymin = dataset['Y'].min()
+    Y = (dataset['Y'] - Ymin) - 0.5*(Ymax - Ymin)
+##
     U = (dataset['u'] - 1.0) / (2.0 - 1.0)
 
     X_star = X
-    k_star = K.reshape(-1,1)
+    y_star = Y.reshape(-1,1)
     u_star = U.reshape(-1,1)
 
     N_u = int(sys.argv[-3])
-    N_k = int(sys.argv[-2])
+    N_y = int(sys.argv[-2])
     N_f = int(sys.argv[-1])
     N = u_star.shape[0]  
     res = int(N**(1/2))
@@ -54,10 +56,10 @@ if __name__ == "__main__":
     
     samples=int(sys.argv[-5])
     idx_us = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_u] ]*samples
-    idx_ks = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_k] ]*samples
+    idx_ys = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_y] ]*samples
 #    idx_us = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_u] for _ in 
 #              range(samples)]
-#    idx_ks = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_k] for _ in 
+#    idx_ys = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_y] for _ in 
 #              range(samples)]
     idx_fs = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_f] ]*samples
 #    idx_fs = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_f] for _ in 
@@ -71,13 +73,14 @@ if __name__ == "__main__":
 
     errors_k = []
     errors_u = []
+    errors_y = []
 
-    for idx_u, idx_k, idx_f in zip(idx_us,idx_ks, idx_fs): 
+    for idx_u, idx_y, idx_f in zip(idx_us,idx_ys, idx_fs): 
 
         # Training data
-#    idx_k = np.random.choice(N, N_k)
-        X_k = X[idx_k,:]
-        Y_k = k_star[idx_k,:]
+#    idx_y = np.random.choice(N, N_y)
+        X_y = X[idx_y,:]
+        Y_y = y_star[idx_y,:]
         
 #    idx_u = np.random.choice(N, N_u)
         X_u = X[idx_u,:]
@@ -113,25 +116,31 @@ if __name__ == "__main__":
 
         # Create model
         layers_u = [2,50,50,50,1]
-        layers_k = [2,50,50,50,1]
-        model = DarcyNet2D_BCs(X_k, np.log(Y_k), X_u, Y_u, X_f, Y_f, 
+        layers_y = [2,50,50,50,1]
+        model = DarcyNet2D_BCs_Y(X_y, Y_y, X_u, Y_u, X_f, Y_f, 
                                X_ubD, Y_ubD, X_ubN, Y_ubN, normal_vec,
-                               layers_k, layers_u, lb, ub)
+                               layers_y, layers_u, lb, ub)
         
         # Train
         model.train()
         
         # Predict at test points
-        k_pred = np.exp(model.predict_k(X_star))
+        y_pred = model.predict_y(X_star)
+        k_pred = np.exp(y_pred)
         u_pred = model.predict_u(X_star)
         
         # Relative L2 error
+        k_star = np.exp(y_star)
         error_k = np.linalg.norm(k_star - k_pred, 2)/np.linalg.norm(k_star, 2)
+        error_y = np.linalg.norm(y_star - y_pred, 2)/np.linalg.norm(y_star, 2)
         error_u = np.linalg.norm(u_star - u_pred, 2)/np.linalg.norm(u_star, 2)
+        error_y = np.linalg.norm(y_star - y_pred, 2)/np.linalg.norm(y_star, 2)
+
+
 
         errors_k.append(error_k)
         errors_u.append(error_u)
-        sys.exit(0)
+        errors_y.append(error_y)
 
        # Plot
         nn = 200
@@ -173,7 +182,7 @@ if __name__ == "__main__":
 
         fig = plt.figure(1)
         plt.pcolor(XX, YY, K_plot, cmap='viridis')
-        plt.plot(X_k[:,0], X_k[:,1], 'ro', markersize = 1)
+        plt.plot(X_y[:,0], X_y[:,1], 'ro', markersize = 1)
         plt.clim(0.0, np.max(k_star))
         plt.colorbar()
         plt.xticks(fontsize=14)
@@ -231,6 +240,7 @@ if __name__ == "__main__":
         #completely reset tensorflow
         tf.reset_default_graph()
 
+    sys.exit(0)
     with open("./errors/hc/k_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
               "a") as f:
         writer = csv.writer(f, delimiter=',')

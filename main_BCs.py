@@ -10,6 +10,8 @@ python main_BCs.py seed uobs kobs collobs
 import sys
 import csv
 import numpy as np
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 from pyDOE import lhs
 from scipy.interpolate import griddata
@@ -128,6 +130,7 @@ if __name__ == "__main__":
         errors_k.append(error_k)
         errors_u.append(error_u)
 
+        sys.exit(0)
        # Plot
         nn = 200
         x = np.linspace(lb[0], ub[0], nn)
