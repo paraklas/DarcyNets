@@ -30,11 +30,9 @@ if __name__ == "__main__":
 #    dataset = np.load('test_sdfs_est_hc_lm.npz')
     Z = dataset['centroids']
     X = Z[[1,0],:].T
-    Ymax = dataset['Y'].max()
-    Ymin = dataset['Y'].min()
-    Y = (dataset['Y'] - Ymin) - 0.5*(Ymax - Ymin)
+    Y = dataset['Y']
 ##
-    U = (dataset['u'] - 1.0) / (2.0 - 1.0)
+    U = dataset['u']
 
     X_star = X
     y_star = Y.reshape(-1,1)
@@ -149,15 +147,19 @@ if __name__ == "__main__":
         XX, YY = np.meshgrid(x,y)
 
         K_orig = griddata(X_star, k_star.flatten(), (XX, YY), method='cubic')
+        Y_orig = griddata(X_star, y_star.flatten(), (XX, YY), method='cubic')
         U_orig = griddata(X_star, u_star.flatten(), (XX, YY), method='cubic')
         K_plot = griddata(X_star, k_pred.flatten(), (XX, YY), method='cubic')
+        Y_plot = griddata(X_star, y_pred.flatten(), (XX, YY), method='cubic')
         U_plot = griddata(X_star, u_pred.flatten(), (XX, YY), method='cubic')
         
         K_error = griddata(X_star, np.abs(k_star-k_pred).flatten(), (XX, YY), method='cubic')
+        Y_error = griddata(X_star, np.abs(y_star-y_pred).flatten(), (XX, YY), method='cubic')
         U_error = griddata(X_star, np.abs(u_star-u_pred).flatten(), (XX, YY), method='cubic')
 
         fig = plt.figure(10)
         plt.pcolor(XX, YY, K_orig, cmap='viridis')
+        plt.clim(np.min(k_star), np.max(k_star))
         plt.colorbar()
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
@@ -165,11 +167,25 @@ if __name__ == "__main__":
         plt.ylabel('$x_2$', fontsize=16)  
         plt.title('$k(x_1,x_2)$', fontsize=16)
         fig.tight_layout()
-        fig.savefig('./plots/hc/orginal_k_field.png')
+        fig.savefig('./plots/hc/original_k_field.png')
         fig.clf()
 
         fig = plt.figure(11)
+        plt.pcolor(XX, YY, Y_orig, cmap='viridis')
+        plt.clim(np.min(y_star), np.max(y_star))
+        plt.colorbar()
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.xlabel('$x_1$', fontsize=16)
+        plt.ylabel('$x_2$', fontsize=16)  
+        plt.title('$y(x_1,x_2)$', fontsize=16)
+        fig.tight_layout()
+        fig.savefig('./plots/hc/original_y_field.png')
+        fig.clf()
+
+        fig = plt.figure(12)
         plt.pcolor(XX, YY, U_orig, cmap='viridis')
+        plt.clim(np.min(u_star), np.max(u_star))
         plt.colorbar()
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
@@ -177,13 +193,13 @@ if __name__ == "__main__":
         plt.ylabel('$x_2$', fontsize=16)  
         plt.title('$u(x_1,x_2)$', fontsize=16)
         fig.tight_layout()
-        fig.savefig('./plots/hc/orginal_u_field.png')
+        fig.savefig('./plots/hc/original_u_field.png')
         fig.clf()
 
         fig = plt.figure(1)
         plt.pcolor(XX, YY, K_plot, cmap='viridis')
         plt.plot(X_y[:,0], X_y[:,1], 'ro', markersize = 1)
-        plt.clim(0.0, np.max(k_star))
+        plt.clim(np.min(k_star), np.max(k_star))
         plt.colorbar()
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
@@ -195,10 +211,25 @@ if __name__ == "__main__":
         fig.clf()
 
         fig = plt.figure(2)
+        plt.pcolor(XX, YY, Y_plot, cmap='viridis')
+        plt.plot(X_y[:,0], X_y[:,1], 'ro', markersize = 1)
+        plt.clim(np.min(y_star), np.max(y_star))
+        plt.colorbar()
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.xlabel('$x_1$', fontsize=16)
+        plt.ylabel('$x_2$', fontsize=16)  
+        plt.title('$y(x_1,x_2)$', fontsize=16)
+        fig.tight_layout()
+        fig.savefig('./plots/hc/yfield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
+        fig.clf()
+
+        fig = plt.figure(3)
         plt.pcolor(XX, YY, U_plot, cmap='viridis')
         plt.plot(X_u[:,0], X_u[:,1], 'ro', markersize = 1)    
         plt.plot(X_ubD[:,0], X_ubD[:,1], 'ro', markersize = 1)   
         plt.plot(X_ubN[:,0], X_ubN[:,1], 'ro', markersize = 1)   
+        plt.clim(np.min(u_star), np.max(u_star))
         plt.colorbar()
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
@@ -209,7 +240,7 @@ if __name__ == "__main__":
         fig.savefig('./plots/hc/ufield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
         fig.clf()
 
-        fig = plt.figure(3)
+        fig = plt.figure(4)
         plt.pcolor(XX, YY, K_error, cmap='viridis')
         plt.colorbar()
         plt.xticks(fontsize=14)
@@ -220,8 +251,20 @@ if __name__ == "__main__":
         fig.tight_layout()
         fig.savefig('./plots/hc/kfield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_error.png')
         fig.clf()
+
+        fig = plt.figure(5)
+        plt.pcolor(XX, YY, Y_error, cmap='viridis')
+        plt.colorbar()
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.xlabel('$x_1$', fontsize=16)
+        plt.ylabel('$x_2$', fontsize=16)  
+        plt.title('Absolute error', fontsize=16)
+        fig.tight_layout()
+        fig.savefig('./plots/hc/yfield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_error.png')
+        fig.clf()
         
-        fig = plt.figure(4)
+        fig = plt.figure(6)
         plt.pcolor(XX, YY, U_error, cmap='viridis')
         plt.colorbar()
         plt.xticks(fontsize=14)
@@ -240,11 +283,16 @@ if __name__ == "__main__":
         #completely reset tensorflow
         tf.reset_default_graph()
 
-    sys.exit(0)
     with open("./errors/hc/k_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
               "a") as f:
         writer = csv.writer(f, delimiter=',')
         writer.writerow(errors_k)
+    f.close()
+
+    with open("./errors/hc/y_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
+              "a") as f:
+        writer = csv.writer(f, delimiter=',')
+        writer.writerow(errors_y)
     f.close()
 
     with open("./errors/hc/u_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 

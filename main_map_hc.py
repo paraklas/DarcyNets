@@ -33,10 +33,12 @@ if __name__ == "__main__":
     X = Z[[1,0],:].T
 #    Kscale = np.exp(1) / np.max(dataset['K'])
     K = dataset['K']
+    Y = dataset['Y']
     U = dataset['u']
     
     X_star = X
     k_star = K.reshape(-1,1)
+    y_star = Y.reshape(-1,1)
     u_star = U.reshape(-1,1)
 
     N_u = int(sys.argv[-3])
@@ -70,6 +72,7 @@ if __name__ == "__main__":
     np.random.seed(int(sys.argv[-4]))
 
     errors_k = []
+    errors_y = []
     errors_u = []
 
     for idx_u, idx_k, idx_f in zip(idx_us,idx_ks, idx_fs): 
@@ -87,8 +90,8 @@ if __name__ == "__main__":
         g = Geom(L, N)
         g.calculate()
 
-        ul = 2.0
-        ur = 1.0
+        ul = 1.0
+        ur = 0.0
         bc = BC(g)
         bc.dirichlet(g, "left", ul)
         bc.dirichlet(g, "right", ur)
@@ -117,14 +120,17 @@ if __name__ == "__main__":
         Y0 = np.full(g.cells.num, 0.0)
 
         res = spo.leastsq(dasa.obj, Y0, Dfun=dasa.grad)
+        y_pred = res[0].reshape(-1,1)
         k_pred = np.exp(res[0]).reshape(-1,1)
         # Predict at test points
 
         # Relative L2 error
         error_k = np.linalg.norm(k_star - k_pred, 2)/np.linalg.norm(k_star, 2)
+        error_y = np.linalg.norm(y_star - y_pred, 2)/np.linalg.norm(y_star, 2)
 #        error_u = np.linalg.norm(u_star - u_pred, 2)/np.linalg.norm(u_star, 2)
 
         errors_k.append(error_k)
+        errors_y.append(error_y)
 #        errors_u.append(error_u)
 
        # Plot
@@ -137,15 +143,17 @@ if __name__ == "__main__":
         XX, YY = np.meshgrid(x,y)
 
         K_plot = griddata(X_star, k_pred.flatten(), (XX, YY), method='cubic')
+        Y_plot = griddata(X_star, y_pred.flatten(), (XX, YY), method='cubic')
 #        U_plot = griddata(X_star, u_pred.flatten(), (XX, YY), method='cubic')
         
         K_error = griddata(X_star, np.abs(k_star-k_pred).flatten(), (XX, YY), method='cubic')
+        Y_error = griddata(X_star, np.abs(y_star-y_pred).flatten(), (XX, YY), method='cubic')
 #        U_error = griddata(X_star, np.abs(u_star-u_pred).flatten(), (XX, YY), method='cubic')
 
         fig = plt.figure(1)
         plt.pcolor(XX, YY, K_plot, cmap='viridis')
         plt.plot(X_k[:,0], X_k[:,1], 'ro', markersize = 1)
-        plt.clim(0.0, np.max(k_star))
+        plt.clim(np.max(k_star), np.max(k_star))
         plt.colorbar()
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
@@ -153,38 +161,47 @@ if __name__ == "__main__":
         plt.ylabel('$x_2$', fontsize=16)
         plt.title('$k(x_1,x_2)$', fontsize=16)
         fig.tight_layout() 
-        fig.savefig('./plots/map_hc/map_sample_'+str(sys.argv[-5])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
+        fig.savefig('./plots/map_hc/map_k_sample_'+str(sys.argv[-5])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
         fig.clf()
-#        plt.subplot(2,2,2)
-#        plt.pcolor(XX, YY, U_plot, cmap='viridis')
-#        plt.plot(X_u[:,0], X_u[:,1], 'ro', markersize = 1)    
-#        plt.plot(X_ubD[:,0], X_ubD[:,1], 'ro', markersize = 1)   
-#        plt.plot(X_ubN[:,0], X_ubN[:,1], 'ro', markersize = 1)   
-#        plt.colorbar()
-#        plt.xlabel('$x_1$')
-#        plt.ylabel('$x_2$')  
-#        plt.title('$u(x_1,x_2)$')
-        
+
         fig = plt.figure(2)
+        plt.pcolor(XX, YY, Y_plot, cmap='viridis')
+        plt.plot(X_k[:,0], X_k[:,1], 'ro', markersize = 1)
+        plt.clim(np.max(y_star), np.max(y_star))
+        plt.colorbar()
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.xlabel('$x_1$', fontsize=16)
+        plt.ylabel('$x_2$', fontsize=16)
+        plt.title('$y(x_1,x_2)$', fontsize=16)
+        fig.tight_layout() 
+        fig.savefig('./plots/map_hc/map_y_sample_'+str(sys.argv[-5])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
+        fig.clf()
+        
+        fig = plt.figure(3)
         plt.pcolor(XX, YY, K_error, cmap='viridis')
         plt.colorbar()
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
         plt.xlabel('$x_1$', fontsize=16)
         plt.ylabel('$x_2$', fontsize=16)
-        plt.title('Absolute error', fontsize=16)
-        
+        plt.title('Absolute error', fontsize=16) 
         fig.tight_layout()
-#        plt.subplot(2,2,4)
-#        plt.pcolor(XX, YY, U_error, cmap='viridis')
-#        plt.colorbar()
-#        plt.xlabel('$x_1$')
-#        plt.ylabel('$x_2$')  
-#        plt.title('Absolute error')
-
-#        fig.savefig('./plots/sample'+str(samples)+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_errors.png')
-        fig.savefig('./plots/map_hc/map_sample_'+str(sys.argv[-5])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_errors.png')
+        fig.savefig('./plots/map_hc/map_k_sample_'+str(sys.argv[-5])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_errors.png')
         fig.clf()
+
+        fig = plt.figure(4)
+        plt.pcolor(XX, YY, Y_error, cmap='viridis')
+        plt.colorbar()
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.xlabel('$x_1$', fontsize=16)
+        plt.ylabel('$x_2$', fontsize=16)
+        plt.title('Absolute error', fontsize=16) 
+        fig.tight_layout()
+        fig.savefig('./plots/map_hc/map_y_sample_'+str(sys.argv[-5])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_errors.png')
+        fig.clf()
+        plt.close('all')
         #use to label plots
         samples=samples-1
 
@@ -195,6 +212,11 @@ if __name__ == "__main__":
         writer.writerow(errors_k)
     f.close()
 
+    with open("./errors/map_hc/map_y_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
+              "a") as f:
+        writer = csv.writer(f, delimiter=',')
+        writer.writerow(errors_y)
+    f.close()
 #    with open("./errors/map_u_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
 #              "a") as f:
 #        writer = csv.writer(f, delimiter=',')
