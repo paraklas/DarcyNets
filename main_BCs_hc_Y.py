@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 python main_BCs_hc.py runs seed uobs kobs collobs
@@ -13,12 +13,13 @@ import matplotlib.pyplot as plt
 from pyDOE import lhs
 from scipy.interpolate import griddata
 sys.path.append('')
-from models_tf import DarcyNet2D_BCs
+from models_tf import DarcyNet2D_BCs_Y
 
 import tensorflow as tf
 
 tf.set_random_seed(int(sys.argv[-4]))
 np.random.seed(int(sys.argv[-4]))
+
 
 if __name__ == "__main__": 
 
@@ -26,15 +27,15 @@ if __name__ == "__main__":
 #    dataset = np.load('test_sdfs_est_hc_lm.npz')
     Z = dataset['centroids']
     X = Z[[1,0],:].T
-    K = dataset['K']
+    Y = dataset['Y']
     U = dataset['u']
 
     X_star = X
-    k_star = K.reshape(-1,1)
+    y_star = Y.reshape(-1,1)
     u_star = U.reshape(-1,1)
 
     N_u = int(sys.argv[-3])
-    N_k = int(sys.argv[-2])
+    N_y = int(sys.argv[-2])
     N_f = int(sys.argv[-1])
     N = u_star.shape[0]  
     res = int(N**(1/2))
@@ -49,10 +50,10 @@ if __name__ == "__main__":
     
     samples=int(sys.argv[-5])
     idx_us = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_u] ]*samples
-    idx_ks = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_k] ]*samples
+    idx_ys = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_y] ]*samples
 #    idx_us = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_u] for _ in 
 #              range(samples)]
-#    idx_ks = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_k] for _ in 
+#    idx_ys = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_y] for _ in 
 #              range(samples)]
     idx_fs = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_f] ]*samples
 #    idx_fs = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_f] for _ in 
@@ -66,13 +67,14 @@ if __name__ == "__main__":
 
     errors_k = []
     errors_u = []
+    errors_y = []
 
-    for idx_u, idx_k, idx_f in zip(idx_us,idx_ks, idx_fs): 
+    for idx_u, idx_y, idx_f in zip(idx_us,idx_ys, idx_fs): 
 
         # Training data
-#    idx_k = np.random.choice(N, N_k)
-        X_k = X[idx_k,:]
-        Y_k = k_star[idx_k,:]
+#    idx_y = np.random.choice(N, N_y)
+        X_y = X[idx_y,:]
+        Y_y = y_star[idx_y,:]
         
 #    idx_u = np.random.choice(N, N_u)
         X_u = X[idx_u,:]
@@ -108,24 +110,28 @@ if __name__ == "__main__":
 
         # Create model
         layers_u = [2,50,50,50,1]
-        layers_k = [2,100,100,100,1]
-        model = DarcyNet2D_BCs(X_k, Y_k, X_u, Y_u, X_f, Y_f, 
+        layers_y = [2,50,50,50,1]
+        model = DarcyNet2D_BCs_Y(X_y, Y_y, X_u, Y_u, X_f, Y_f, 
                                X_ubD, Y_ubD, X_ubN, Y_ubN, normal_vec,
-                               layers_k, layers_u, lb, ub)
+                               layers_y, layers_u, lb, ub)
         
         # Train
         model.train()
         
         # Predict at test points
-        k_pred = model.predict_k(X_star)
+        y_pred = model.predict_y(X_star)
+        k_pred = np.exp(y_pred)
         u_pred = model.predict_u(X_star)
         
         # Relative L2 error
+        k_star = np.exp(y_star)
         error_k = np.linalg.norm(k_star - k_pred, 2)/np.linalg.norm(k_star, 2)
+        error_y = np.linalg.norm(y_star - y_pred, 2)/np.linalg.norm(y_star, 2)
         error_u = np.linalg.norm(u_star - u_pred, 2)/np.linalg.norm(u_star, 2)
 
         errors_k.append(error_k)
         errors_u.append(error_u)
+        errors_y.append(error_y)
 
        # Plot
         nn = 200
@@ -134,11 +140,14 @@ if __name__ == "__main__":
         XX, YY = np.meshgrid(x,y)
 
         K_orig = griddata(X_star, k_star.flatten(), (XX, YY), method='cubic')
+        Y_orig = griddata(X_star, y_star.flatten(), (XX, YY), method='cubic')
         U_orig = griddata(X_star, u_star.flatten(), (XX, YY), method='cubic')
         K_plot = griddata(X_star, k_pred.flatten(), (XX, YY), method='cubic')
+        Y_plot = griddata(X_star, y_pred.flatten(), (XX, YY), method='cubic')
         U_plot = griddata(X_star, u_pred.flatten(), (XX, YY), method='cubic')
         
         K_error = griddata(X_star, np.abs(k_star-k_pred).flatten(), (XX, YY), method='cubic')
+        Y_error = griddata(X_star, np.abs(y_star-y_pred).flatten(), (XX, YY), method='cubic')
         U_error = griddata(X_star, np.abs(u_star-u_pred).flatten(), (XX, YY), method='cubic')
 
         fig = plt.figure(10)
@@ -151,10 +160,23 @@ if __name__ == "__main__":
         plt.ylabel('$x_2$', fontsize=16)  
         plt.title('$k(x_1,x_2)$', fontsize=16)
         fig.tight_layout()
-        fig.savefig('./plots/hc/pred_k/orginal_k_field.png')
+        fig.savefig('./plots/hc/pred_y/original_k_field.png')
         fig.clf()
 
         fig = plt.figure(11)
+        plt.pcolor(XX, YY, Y_orig, cmap='viridis')
+        plt.clim(np.min(y_star), np.max(y_star))
+        plt.colorbar()
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.xlabel('$x_1$', fontsize=16)
+        plt.ylabel('$x_2$', fontsize=16)  
+        plt.title('$y(x_1,x_2)$', fontsize=16)
+        fig.tight_layout()
+        fig.savefig('./plots/hc/pred_y/original_y_field.png')
+        fig.clf()
+
+        fig = plt.figure(12)
         plt.pcolor(XX, YY, U_orig, cmap='viridis')
         plt.clim(np.min(u_star), np.max(u_star))
         plt.colorbar()
@@ -164,12 +186,12 @@ if __name__ == "__main__":
         plt.ylabel('$x_2$', fontsize=16)  
         plt.title('$u(x_1,x_2)$', fontsize=16)
         fig.tight_layout()
-        fig.savefig('./plots/hc/pred_k/orginal_u_field.png')
+        fig.savefig('./plots/hc/pred_y/original_u_field.png')
         fig.clf()
 
         fig = plt.figure(1)
         plt.pcolor(XX, YY, K_plot, cmap='viridis')
-        plt.plot(X_k[:,0], X_k[:,1], 'ro', markersize = 1)
+        plt.plot(X_y[:,0], X_y[:,1], 'ro', markersize = 1)
         plt.clim(np.min(k_star), np.max(k_star))
         plt.colorbar()
         plt.xticks(fontsize=14)
@@ -178,10 +200,24 @@ if __name__ == "__main__":
         plt.ylabel('$x_2$', fontsize=16)  
         plt.title('$k(x_1,x_2)$', fontsize=16)
         fig.tight_layout()
-        fig.savefig('./plots/hc/pred_k/kfield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
+        fig.savefig('./plots/hc/pred_y/kfield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
         fig.clf()
 
         fig = plt.figure(2)
+        plt.pcolor(XX, YY, Y_plot, cmap='viridis')
+        plt.plot(X_y[:,0], X_y[:,1], 'ro', markersize = 1)
+        plt.clim(np.min(y_star), np.max(y_star))
+        plt.colorbar()
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.xlabel('$x_1$', fontsize=16)
+        plt.ylabel('$x_2$', fontsize=16)  
+        plt.title('$y(x_1,x_2)$', fontsize=16)
+        fig.tight_layout()
+        fig.savefig('./plots/hc/pred_y/yfield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
+        fig.clf()
+
+        fig = plt.figure(3)
         plt.pcolor(XX, YY, U_plot, cmap='viridis')
         plt.plot(X_u[:,0], X_u[:,1], 'ro', markersize = 1)    
         plt.plot(X_ubD[:,0], X_ubD[:,1], 'ro', markersize = 1)   
@@ -194,10 +230,10 @@ if __name__ == "__main__":
         plt.ylabel('$x_2$', fontsize=16)  
         plt.title('$u(x_1,x_2)$', fontsize=16) 
         fig.tight_layout()
-        fig.savefig('./plots/hc/pred_k/ufield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
+        fig.savefig('./plots/hc/pred_y/ufield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
         fig.clf()
 
-        fig = plt.figure(3)
+        fig = plt.figure(4)
         plt.pcolor(XX, YY, K_error, cmap='viridis')
         plt.colorbar()
         plt.xticks(fontsize=14)
@@ -206,10 +242,22 @@ if __name__ == "__main__":
         plt.ylabel('$x_2$', fontsize=16)  
         plt.title('Absolute error', fontsize=16)
         fig.tight_layout()
-        fig.savefig('./plots/hc/pred_k/kfield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_error.png')
+        fig.savefig('./plots/hc/pred_y/kfield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_error.png')
+        fig.clf()
+
+        fig = plt.figure(5)
+        plt.pcolor(XX, YY, Y_error, cmap='viridis')
+        plt.colorbar()
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.xlabel('$x_1$', fontsize=16)
+        plt.ylabel('$x_2$', fontsize=16)  
+        plt.title('Absolute error', fontsize=16)
+        fig.tight_layout()
+        fig.savefig('./plots/hc/pred_y/field_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_error.png')
         fig.clf()
         
-        fig = plt.figure(4)
+        fig = plt.figure(6)
         plt.pcolor(XX, YY, U_error, cmap='viridis')
         plt.colorbar()
         plt.xticks(fontsize=14)
@@ -218,7 +266,7 @@ if __name__ == "__main__":
         plt.ylabel('$x_2$', fontsize=16)  
         plt.title('Absolute error', fontsize=16)
         fig.tight_layout()
-        fig.savefig('./plots/hc/pred_k/ufield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_error.png')
+        fig.savefig('./plots/hc/pred_y/ufield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_error.png')
         fig.clf()
 
         plt.close('all')
@@ -228,17 +276,24 @@ if __name__ == "__main__":
         #completely reset tensorflow
         tf.reset_default_graph()
 
-    with open("./errors/hc/pred_k/k_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
+    with open("./errors/hc/pred_y/k_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
               "a") as f:
         writer = csv.writer(f, delimiter=',')
         writer.writerow(errors_k)
     f.close()
 
-    with open("./errors/hc/pred_k/u_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
+    with open("./errors/hc/pred_y/y_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
+              "a") as f:
+        writer = csv.writer(f, delimiter=',')
+        writer.writerow(errors_y)
+    f.close()
+
+    with open("./errors/hc/pred_y/u_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
               "a") as f:
         writer = csv.writer(f, delimiter=',')
         writer.writerow(errors_u)
     f.close()
+
 #
 #        
 #    #    filename = sys.argv[-1].replace('/','.').split('.')[-2]

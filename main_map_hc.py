@@ -90,7 +90,7 @@ if __name__ == "__main__":
         g = Geom(L, N)
         g.calculate()
 
-        ul = 1.0
+        ul = 3.0
         ur = 0.0
         bc = BC(g)
         bc.dirichlet(g, "left", ul)
