@@ -1087,6 +1087,206 @@ class DarcyNet2D_BCs:
         tf_dict = {self.x1_f_tf: X_star[:,0:1], self.x2_f_tf: X_star[:,1:2]}    
         f_star = self.sess.run(self.f_pred, tf_dict) 
         return f_star
+
+class DarcyNet2D_BCs_no_physics:
+    # Initialize the class
+    def __init__(self, X_k, Y_k, X_u, Y_u,
+                 X_ubD, Y_ubD, X_ubN, Y_ubN, normal_vec,
+                 layers_k, layers_u, lb, ub):
+     
+        self.lb = lb
+        self.ub = ub
+        X_k = (X_k - lb) - 0.5*(ub - lb)
+        X_u = (X_u - lb) - 0.5*(ub - lb)
+        X_ubD = (X_ubD - lb) - 0.5*(ub - lb)
+        X_ubN = (X_ubN - lb) - 0.5*(ub - lb)
+
+#        Y_k = (Y_k - Y_k.min()) - 0.5*(Y_k.max() - Y_k.min())
+#        Y_u = (Y_u - Y_u.min()) - 0.5*(Y_u.max() - Y_u.min())
+#        Y_ubD = (Y_ubD - Y_ubD.min()) -\
+#            0.5*(Y_ubD.max() - Y_ubD.min())
+
+        self.x1_k = X_k[:,0:1]
+        self.x2_k = X_k[:,1:2]
+        self.Y_k = Y_k
+        
+        self.x1_u = X_u[:,0:1]
+        self.x2_u = X_u[:,1:2]
+        self.Y_u = Y_u
+        
+        self.x1_ubD = X_ubD[:,0:1]
+        self.x2_ubD = X_ubD[:,1:2]
+        self.Y_ubD = Y_ubD
+        
+        self.x1_ubN = X_ubN[:,0:1]
+        self.x2_ubN = X_ubN[:,1:2]
+        self.Y_ubN = Y_ubN
+        
+        self.normal_vec = normal_vec
+        
+        self.layers_k = layers_k
+        self.layers_u = layers_u
+
+        # Initialize network weights and biases  
+        self.weights_k, self.biases_k = self.initialize_NN(layers_k)        
+        self.weights_u, self.biases_u = self.initialize_NN(layers_u)
+        
+        # Define Tensorflow session
+        self.sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+        
+        # Define placeholders and computational graph
+        self.x1_k_tf = tf.placeholder(tf.float32, shape=(None, self.x1_k.shape[1]))
+        self.x2_k_tf = tf.placeholder(tf.float32, shape=(None, self.x2_k.shape[1]))        
+        self.Yk_tf = tf.placeholder(tf.float32, shape=(None, self.Y_k.shape[1]))
+        
+        self.x1_u_tf = tf.placeholder(tf.float32, shape=(None, self.x1_u.shape[1]))
+        self.x2_u_tf = tf.placeholder(tf.float32, shape=(None, self.x2_u.shape[1]))        
+        self.Yu_tf = tf.placeholder(tf.float32, shape=(None, self.Y_u.shape[1]))
+        
+        self.x1_ubD_tf = tf.placeholder(tf.float32, shape=(None, self.x1_ubD.shape[1]))
+        self.x2_ubD_tf = tf.placeholder(tf.float32, shape=(None, self.x2_ubD.shape[1]))        
+        self.YubD_tf = tf.placeholder(tf.float32, shape=(None, self.Y_ubD.shape[1]))
+        
+        self.x1_ubN_tf = tf.placeholder(tf.float32, shape=(None, self.x1_ubN.shape[1]))
+        self.x2_ubN_tf = tf.placeholder(tf.float32, shape=(None, self.x2_ubN.shape[1]))        
+        self.YubN_tf = tf.placeholder(tf.float32, shape=(None, self.Y_ubN.shape[1]))
+              
+        self.normal_vec_tf = tf.placeholder(tf.float32, shape=(None, self.normal_vec.shape[1]))
+        
+        # Evaluate prediction
+        self.k_pred = self.net_k(self.x1_k_tf, self.x2_k_tf)
+        self.u_pred = self.net_u(self.x1_u_tf, self.x2_u_tf)
+        
+        self.ubD_pred = self.net_ubD(self.x1_ubD_tf, self.x2_ubD_tf)
+        self.ubN_pred = self.net_ubN(self.x1_ubN_tf, self.x2_ubN_tf, self.normal_vec_tf)
+        
+        # Evaluate loss
+        self.loss = tf.losses.mean_squared_error(self.Yk_tf, self.k_pred) + \
+                    tf.losses.mean_squared_error(self.Yu_tf, self.u_pred) + \
+                    tf.losses.mean_squared_error(self.YubD_tf, self.ubD_pred) + \
+                    tf.losses.mean_squared_error(self.YubN_tf, self.ubN_pred)
+        
+        # Define optimizer (use L-BFGS for better accuracy)       
+        self.optimizer = tf.contrib.opt.ScipyOptimizerInterface(self.loss, 
+                                                                method = 'L-BFGS-B', 
+                                                                options = {'maxiter': 50000,
+                                                                           'maxfun': 50000,
+                                                                           'maxcor': 50,
+                                                                           'maxls': 50,
+                                                                           'ftol' : 1.0 * np.finfo(float).eps})
+
+        
+        # Initialize Tensorflow variables
+        init = tf.global_variables_initializer()
+        self.sess.run(init)
+
+    
+    # Initialize network weights and biases using Xavier initialization
+    def initialize_NN(self, layers): 
+        # Deleted Custom initialization
+    
+        # Xavier initialization
+        def xavier_init(size):
+            in_dim = size[0]
+            out_dim = size[1]
+            xavier_stddev = 1. / np.sqrt((in_dim + out_dim) / 2.)
+            return tf.Variable(tf.random_normal([in_dim, out_dim], dtype=tf.float32) * xavier_stddev, dtype=tf.float32)   
+        
+        weights = []
+        biases = []
+        num_layers = len(layers) 
+        W = xavier_init(size=[layers[0], layers[1]])
+        b = tf.Variable(tf.zeros([1,layers[1]], dtype=tf.float32), dtype=tf.float32)
+        weights.append(W)
+        biases.append(b)            
+        for l in range(1,num_layers-1):
+            W = xavier_init(size=[layers[l], layers[l+1]])
+            b = tf.Variable(tf.zeros([1,layers[l+1]], dtype=tf.float32), dtype=tf.float32)
+            weights.append(W)
+            biases.append(b)        
+        return weights, biases
+       
+           
+    # Evaluates the forward pass
+    def forward_pass(self, H, layers, weights, biases):
+        num_layers = len(layers)
+        for l in range(0,num_layers-2):
+            W = weights[l]
+            b = biases[l]
+            H = tf.tanh(tf.add(tf.matmul(H, W), b))
+        W = weights[-1]
+        b = biases[-1]
+        H = tf.nn.softplus(tf.add(tf.matmul(H, W), b))
+        return H
+    
+    
+    # Forward pass for k
+    def net_k(self, x1, x2):
+        k = self.forward_pass(tf.concat([x1, x2], 1),
+                              self.layers_k,
+                              self.weights_k, 
+                              self.biases_k)
+        return k
+    # Forward pass for u
+    def net_u(self, x1, x2):
+        u = self.forward_pass(tf.concat([x1, x2], 1),
+                              self.layers_u,
+                              self.weights_u, 
+                              self.biases_u)
+        return u
+    
+    def net_ubD(self, x1, x2):
+        u = self.net_u(x1, x2)
+        return u
+    
+    
+    def net_ubN(self, x1, x2, n):
+        u = self.net_u(x1, x2)
+        k = self.net_k(x1, x2)
+        g_1 = k*tf.gradients(u, x1)[0]
+        g_2 = k*tf.gradients(u, x2)[0]
+        g = g_1*n[:,0:1] + g_2*n[:,1:2]
+        return g
+    
+    
+    # Callback to print the loss at every optimization step
+    def callback(self, loss):
+        print('Loss:', loss)
+
+    # Trains the model by minimizing the loss using L-BFGS
+    def train(self): 
+        
+        # Define a dictionary for associating placeholders with data
+        tf_dict = {self.x1_k_tf: self.x1_k, self.x2_k_tf: self.x2_k, self.Yk_tf: self.Y_k,
+                   self.x1_u_tf: self.x1_u, self.x2_u_tf: self.x2_u, self.Yu_tf: self.Y_u, 
+                   self.x1_ubD_tf: self.x1_ubD, self.x2_ubD_tf: self.x2_ubD, self.YubD_tf: self.Y_ubD,
+                   self.x1_ubN_tf: self.x1_ubN, self.x2_ubN_tf: self.x2_ubN, self.YubN_tf: self.Y_ubN,
+                   self.normal_vec_tf: self.normal_vec}
+
+        # Call SciPy's L-BFGS otpimizer
+        self.optimizer.minimize(self.sess, 
+                                feed_dict = tf_dict,         
+                                fetches = [self.loss], 
+                                loss_callback = self.callback)
+
+                
+    # Evaluates predictions at test points           
+    def predict_k(self, X_star): 
+        # Center around the origin
+        X_star = (X_star - self.lb) - 0.5*(self.ub - self.lb)
+        # Predict
+        tf_dict = {self.x1_k_tf: X_star[:,0:1], self.x2_k_tf: X_star[:,1:2]}    
+        k_star = self.sess.run(self.k_pred, tf_dict) 
+        return k_star
+    
+    # Evaluates predictions at test points           
+    def predict_u(self, X_star): 
+        # Center around the origin
+        X_star = (X_star - self.lb) - 0.5*(self.ub - self.lb)
+        # Predict
+        tf_dict = {self.x1_u_tf: X_star[:,0:1], self.x2_u_tf: X_star[:,1:2]}    
+        u_star = self.sess.run(self.u_pred, tf_dict) 
+        return u_star
     
 class DarcyNet2D_BCs_Y:
     # Initialize the class
@@ -1299,8 +1499,8 @@ class DarcyNet2D_BCs_Y:
 
         # Call SciPy's L-BFGS otpimizer
         self.optimizer.minimize(self.sess, 
-                                feed_dict = tf_dict,         
-                                fetches = [self.loss], 
+                                feed_dict = tf_dict,
+                                fetches = [self.loss],
                                 loss_callback = self.callback)
 
                 
@@ -1329,5 +1529,6 @@ class DarcyNet2D_BCs_Y:
         # Predict
         tf_dict = {self.x1_f_tf: X_star[:,0:1], self.x2_f_tf: X_star[:,1:2]}    
         f_star = self.sess.run(self.f_pred, tf_dict) 
+        print(f_star)
         return f_star
     

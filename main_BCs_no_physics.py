@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-python main_BCs.py runs seed uobs kobs collobs
+python main_BCs_no_physics.py runs seed uobs kobs collobs
 
 example
-python main_BCs.py 2 16 20 20 1024
+python main_BCs_no_physics.py 2 16 20 20
 """
 import sys
 import csv
@@ -15,12 +15,12 @@ import matplotlib.pyplot as plt
 from pyDOE import lhs
 from scipy.interpolate import griddata
 
-from models_tf import DarcyNet2D_BCs
+from models_tf import DarcyNet2D_BCs_no_physics
 
 import tensorflow as tf
 
-tf.set_random_seed(int(sys.argv[-4]))
-np.random.seed(int(sys.argv[-4]))
+tf.set_random_seed(int(sys.argv[-3]))
+np.random.seed(int(sys.argv[-3]))
 
 if __name__ == "__main__": 
 
@@ -34,9 +34,8 @@ if __name__ == "__main__":
     k_star = K[idx:idx+1,:].T
     u_star = U[idx:idx+1,:].T
 
-    N_u = int(sys.argv[-3])
-    N_k = int(sys.argv[-2])
-    N_f = int(sys.argv[-1])
+    N_u = int(sys.argv[-2])
+    N_k = int(sys.argv[-1])
     N = u_star.shape[0]  
     res = int(N**(1/2))
     
@@ -48,27 +47,24 @@ if __name__ == "__main__":
     # increasing as you add more points
     np.random.seed(32)
     
-    samples=int(sys.argv[-5])
+    samples=int(sys.argv[-4])
     idx_us = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_u] ]*samples
     idx_ks = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_k] ]*samples
 #    idx_us = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_u] for _ in 
 #              range(samples)]
 #    idx_ks = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_k] for _ in 
 #              range(samples)]
-    idx_fs = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_f] ]*samples
-#    idx_fs = [np.floor(N*lhs(1, N)).astype(int).flatten()[:N_f] for _ in 
-#              range(samples)]
 
 #idx_us = np.apply_along_axis(lambda r : r[0]+32*r[1], 
 #                             axis=1, 
 #                             arr=np.floor(res*lhs(2)).astype(int))[:N_u]
     #reset seed
-    np.random.seed(int(sys.argv[-4]))
+    np.random.seed(int(sys.argv[-3]))
 
     errors_k = []
     errors_u = []
 
-    for idx_u, idx_k, idx_f in zip(idx_us,idx_ks, idx_fs): 
+    for idx_u, idx_k in zip(idx_us,idx_ks): 
 
         # Training data
 #    idx_k = np.random.choice(N, N_k)
@@ -78,11 +74,7 @@ if __name__ == "__main__":
 #    idx_u = np.random.choice(N, N_u)
         X_u = X[idx_u,:]
         Y_u = u_star[idx_u,:]
-     
-#    idx_f = np.random.choice(N, N_f)
-        X_f = X_star[idx_f,:]
-        Y_f = np.zeros((N_f, 1))
-        
+
         # Dirichlet boundaries
         x_res = int(N**(1/2))
         b0, u0 = X[::x_res,:], u_star[::x_res,:]
@@ -110,7 +102,7 @@ if __name__ == "__main__":
         # Create model
         layers_u = [2,50,50,50,1]
         layers_k = [2,50,50,50,1]
-        model = DarcyNet2D_BCs(X_k, Y_k, X_u, Y_u, X_f, Y_f, 
+        model = DarcyNet2D_BCs_no_physics(X_k, Y_k, X_u, Y_u,
                                X_ubD, Y_ubD, X_ubN, Y_ubN, normal_vec,
                                layers_k, layers_u, lb, ub)
         
@@ -182,7 +174,7 @@ if __name__ == "__main__":
         plt.ylabel('$x_2$', fontsize=16)  
         plt.title('$k(x_1,x_2)$', fontsize=16)
         fig.tight_layout()
-        fig.savefig('./plots/collocation/kfield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
+        fig.savefig('./plots/collocation/kfield_sample_'+str(samples)+'_seed_'+str(sys.argv[-3])+'_u_'+sys.argv[-2]+'_k_'+sys.argv[-1]+'_c_'+str(0)+'_pred.png')
         fig.clf()
 
         fig = plt.figure(2)
@@ -198,7 +190,7 @@ if __name__ == "__main__":
         plt.ylabel('$x_2$', fontsize=16)  
         plt.title('$u(x_1,x_2)$', fontsize=16) 
         fig.tight_layout()
-        fig.savefig('./plots/collocation/ufield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
+        fig.savefig('./plots/collocation/ufield_sample_'+str(samples)+'_seed_'+str(sys.argv[-3])+'_u_'+sys.argv[-2]+'_k_'+sys.argv[-1]+'_c_'+str(0)+'_pred.png')
         fig.clf()
 
         fig = plt.figure(3)
@@ -210,7 +202,7 @@ if __name__ == "__main__":
         plt.ylabel('$x_2$', fontsize=16)  
         plt.title('Absolute error', fontsize=16)
         fig.tight_layout()
-        fig.savefig('./plots/collocation/kfield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_error.png')
+        fig.savefig('./plots/collocation/kfield_sample_'+str(samples)+'_seed_'+str(sys.argv[-3])+'_u_'+sys.argv[-2]+'_k_'+sys.argv[-1]+'_c_'+str(0)+'_error.png')
         fig.clf()
         
         fig = plt.figure(4)
@@ -222,7 +214,7 @@ if __name__ == "__main__":
         plt.ylabel('$x_2$', fontsize=16)  
         plt.title('Absolute error', fontsize=16)
         fig.tight_layout()
-        fig.savefig('./plots/collocation/ufield_sample_'+str(samples)+'_seed_'+str(sys.argv[-4])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_error.png')
+        fig.savefig('./plots/collocation/ufield_sample_'+str(samples)+'_seed_'+str(sys.argv[-3])+'_u_'+sys.argv[-2]+'_k_'+sys.argv[-1]+'_c_'+str(0)+'_error.png')
         fig.clf()
 
         plt.close('all')
@@ -231,13 +223,13 @@ if __name__ == "__main__":
         samples=samples-1
 
 
-    with open("./errors/collocation/k_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
+    with open("./errors/collocation/k_loss_u_"+sys.argv[-2]+"_k_"+sys.argv[-1]+"_c_"+str(0)+".csv", 
               "a") as f:
         writer = csv.writer(f, delimiter=',')
         writer.writerow(errors_k)
     f.close()
 
-    with open("./errors/collocation/u_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
+    with open("./errors/collocation/u_loss_u_"+sys.argv[-2]+"_k_"+sys.argv[-1]+"_c_"+str(0)+".csv", 
               "a") as f:
         writer = csv.writer(f, delimiter=',')
         writer.writerow(errors_u)
