@@ -5,7 +5,7 @@ Created on Tue Mar 20 21:14:04 2018
 
 @author: Paris
 
-python main_BCs.py seed uobs kobs collobs
+python main_BCs.py gamma seed uobs kobs collobs
 """
 import sys
 sys.path.append('../../david_experiment/sdfs/')
@@ -137,49 +137,37 @@ if __name__ == "__main__":
 #        U_error = griddata(X_star, np.abs(u_star-u_pred).flatten(), (XX, YY), method='cubic')
 
         fig = plt.figure(1)
-        plt.subplot(1,2,1)
         plt.pcolor(XX, YY, K_plot, cmap='viridis')
         plt.plot(X_k[:,0], X_k[:,1], 'ro', markersize = 1)
+        plt.clim(np.min(k_star), np.max(k_star))
         plt.colorbar()
-        plt.xlabel('$x_1$')
-        plt.ylabel('$x_2$')  
-        plt.title('$k(x_1,x_2)$')
-        
-#        plt.subplot(2,2,2)
-#        plt.pcolor(XX, YY, U_plot, cmap='viridis')
-#        plt.plot(X_u[:,0], X_u[:,1], 'ro', markersize = 1)    
-#        plt.plot(X_ubD[:,0], X_ubD[:,1], 'ro', markersize = 1)   
-#        plt.plot(X_ubN[:,0], X_ubN[:,1], 'ro', markersize = 1)   
-#        plt.colorbar()
-#        plt.xlabel('$x_1$')
-#        plt.ylabel('$x_2$')  
-#        plt.title('$u(x_1,x_2)$')
-        
-        plt.subplot(1,2,2)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.xlabel('$x_1$', fontsize=16)
+        plt.ylabel('$x_2$', fontsize=16)
+        plt.title('$k(x_1,x_2)$', fontsize=16)
+        fig.tight_layout() 
+        fig.savefig('./plots/map/map_k_sample_'+str(sys.argv[-5])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_pred.png')
+        fig.clf()
+
+        fig = plt.figure(3)
         plt.pcolor(XX, YY, K_error, cmap='viridis')
         plt.colorbar()
-        plt.xlabel('$x_1$')
-        plt.ylabel('$x_2$')  
-        plt.title('Absolute error')
-        
-#        plt.subplot(2,2,4)
-#        plt.pcolor(XX, YY, U_error, cmap='viridis')
-#        plt.colorbar()
-#        plt.xlabel('$x_1$')
-#        plt.ylabel('$x_2$')  
-#        plt.title('Absolute error')
-
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.xlabel('$x_1$', fontsize=16)
+        plt.ylabel('$x_2$', fontsize=16)
+        plt.title('Absolute error', fontsize=16) 
         fig.tight_layout()
-#        fig.savefig('./plots/sample'+str(samples)+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_errors.png')
-        fig.savefig('./plots/mapsample'+str(sys.argv[-5])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_errors.png')
+        fig.savefig('./plots/map/map_k_sample_'+str(sys.argv[-5])+'_u_'+sys.argv[-3]+'_k_'+sys.argv[-2]+'_c_'+sys.argv[-1]+'_errors.png')
         fig.clf()
-        #use to label plots
+ 
         samples=samples-1
 
         #completely reset tensorflow
         tf.reset_default_graph()
 
-    with open("./errors/map_k_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
+    with open("./errors/map/map_k_loss_u_"+sys.argv[-3]+"_k_"+sys.argv[-2]+"_c_"+sys.argv[-1]+".csv", 
               "a") as f:
         writer = csv.writer(f, delimiter=',')
         writer.writerow(errors_k)
