@@ -5,10 +5,9 @@ Created on Tue Mar 20 21:14:04 2018
 
 @author: Paris
 
-python main_BCs.py seed uobs kobs collobs
+python main_map_hc.py seed uobs kobs collobs
 """
 import sys
-sys.path.append('../../david_experiment/sdfs/')
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt

@@ -3,12 +3,9 @@
 """
 Created on Tue Mar 20 21:14:04 2018
 
-@author: Paris
-
-python main_BCs.py gamma seed uobs kobs collobs
+python main_map.py gamma seed uobs kobs collobs
 """
 import sys
-sys.path.append('../../david_experiment/sdfs/')
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,7 +23,7 @@ np.random.seed(int(sys.argv[-4]))
 
 if __name__ == "__main__": 
 
-    dataset = np.load('../test.npz')
+    dataset = np.load('./test.npz')
     X = dataset['coo']
     K = dataset['k']
     U = dataset['u']

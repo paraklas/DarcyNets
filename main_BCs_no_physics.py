@@ -24,7 +24,7 @@ np.random.seed(int(sys.argv[-3]))
 
 if __name__ == "__main__": 
 
-    dataset = np.load('../test.npz')
+    dataset = np.load('./test.npz')
     X = dataset['coo']
     K = dataset['k']
     U = dataset['u']
