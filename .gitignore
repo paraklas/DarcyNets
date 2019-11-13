@@ -1,4 +1,5 @@
 */*
 *.sh
-main_BC_hc*
+main_BC_hc.py
 main_map_hc.py
+main_BC_hc_Y.py
